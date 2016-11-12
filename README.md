@@ -1,2 +1,2 @@
 # backend-ranking
-Backend Rankinf of Tutorial School
+Backend Ranking of Tutorial School
