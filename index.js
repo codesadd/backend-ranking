@@ -1,55 +1,67 @@
+// import ----------------------------------------
+
 const express = require('express')
-const firebase = require('firebase')
+    //const firebase = require('firebase')
+const firebase = require('firebase-admin');
 const bodyParser = require('body-parser')
 const methodOverride = require('method-override')
 
+// init variable ---------------------------------
+
+var serviceAccount = require("./fun-fun-53400-firebase-adminsdk-t6i60-6a09c094f1.json");
+firebase.initializeApp({
+    credential: firebase.credential.cert(serviceAccount),
+    databaseURL: "https://fun-fun-53400.firebaseio.com"
+});
+
 var app = express()
 var self = this
-
 app.use(bodyParser.urlencoded({
     extended: true
 }))
 app.use(bodyParser.json())
 app.use(methodOverride())
 app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  res.header("Access-Control-Allow-Methods", "GET, PUT, POST")
-  next();
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    res.header("Access-Control-Allow-Methods", "GET, PUT, POST")
+    next();
 });
 
-firebase.initializeApp({
-    apiKey: "AIzaSyDIpDDBTd08Lwh8uYYybwJQvHwZEe6ACjE",
-    authDomain: "fun-fun-53400.firebaseapp.com",
-    databaseURL: "https://fun-fun-53400.firebaseio.com",
-    storageBucket: "fun-fun-53400.appspot.com"
-})
-
 self.users = []
-self.demo = []
-self.loadSchool = []
 self.database = []
-self.schools = []
 
 const database = firebase.database()
+const schoolsRef = database.ref().child('schools')
 const usersRef = database.ref().child('users')
-const demoRef  = database.ref().child('demo')
+const demoRef = database.ref().child('demo')
 
-database.ref().on('value', function(snapshot) {
-    self.database = snapshot.val()
-    console.log('data Ready')
-})
+// main ------------------------------------------
+
+database.ref().on('value',
+    function(snapshot) {
+        self.database = snapshot.val()
+        console.log('Database updated');
+    },
+    function(errorObject) {
+        console.log("The read failed: " + errorObject.code);
+    })
 
 app.listen(3000, function() {
-    console.log('Example app listening on port 3000!')
+    console.log('Running app listening on port 3000!')
 })
 
 app.get('/schools', function(req, res) {
     res.json(loadSchool(self.database.schools))
 })
 
+app.get('/users', function(req, res) {
+    res.json(loadSchool(self.database.users))
+})
+
 app.get('/infoschool/:uid/', function(req, res) {
-    console.log('ID-school:', req.params.uid)
+    updateViewSchool(req.params.uid)
+    console.log('ID-school : ', req.params.uid)
     res.json(loadInfoSchool(req.params.uid))
 })
 
@@ -59,20 +71,43 @@ app.get('/allcoures/:uid/:course', function(req, res) {
     res.json(loadAllCoures(req.params.uid, req.params.course))
 })
 
-// POST method route
-app.post('/', function(req, res) {
-    res.send('POST request to the homepage')
+app.get('/updateschool/:schoolName/:address/:city/:state/:postalCode/:biography/:uid', function(req, res) {
+    console.log('check here', req.params.schoolName);
+    var item = {
+        schoolName: req.params.schoolName,
+        address: req.params.address,
+        city: req.params.city,
+        state: req.params.state,
+        postalCode: req.params.postalCode,
+        biography: req.params.biography
+    }
+    res.json(updateSchoolInfo(item, req.params.uid))
 })
 
-function updateViewSchool() {
-    param = {
-        view: self.schoolSelected[0].value.view + 1
-    }
+// method --------------------------------------------
+function updateSchoolInfo(param, id) {
     firebase.database().ref('schools').child(id).update(param);
+    loadInfoSchool(id)
+    var status = {
+        status: 200,
+        text: "success"
+    }
+    self.infoSchools.push(status)
+    return self.infoSchools
+}
+
+function updateViewSchool(id) {
+    var thisSchool = self.school.find(
+        school => school.id === id)
+
+    var param = {
+        view: thisSchool.value.view + 1
+    }
+    firebase.database().ref('schools').child(id).update(param)
 }
 
 function loadSchool(schools) {
-    self.schools = []
+    self.school = []
     var keys = Object.keys(schools);
     keys.sort(); // sort the array of keys
     keys.forEach(function(item) {
@@ -80,12 +115,10 @@ function loadSchool(schools) {
             id: item,
             value: schools[item]
         }
-        //console.log(item);
-        self.schools.push(item)
+        self.school.push(item)
     });
-    return self.schools
+    return self.school
 }
-
 
 function loadInfoSchool(uid, req, res) {
     self.infoSchools = []
@@ -100,13 +133,13 @@ function loadInfoSchool(uid, req, res) {
 }
 
 function loadAllCoures(uid, req, res) {
-    self.allCourses = []
+    var allCourses = []
     database.ref('schools/' + uid).child('courses').on('child_added', function(snapshot) {
         var item = {
             id: snapshot.key,
             value: snapshot.val()
         }
-        self.allCourses.push(item)
+        allCourses.push(item)
     })
-    return self.allCourses
+    return allCourses
 }
