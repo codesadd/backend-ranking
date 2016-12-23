@@ -4,7 +4,8 @@
   "description": "Backend Ranking of Tutorial School",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
   },
   "repository": {
     "type": "git",
@@ -20,6 +21,7 @@
     "body-parser": "^1.15.2",
     "express": "^4.14.0",
     "firebase": "^3.6.0",
-    "firebase-admin": "^4.0.2"
+    "firebase-admin": "^4.0.2",
+    "ttest": "^1.1.0"
   }
 }
