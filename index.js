@@ -12,24 +12,24 @@ const summary = require('summary');
 var sampleA = [7, 10, 5, 8, 3, 4, 6, 5]
 var sampleB = [9, 12, 7, 8, 7, 6, 5, 10]
 const options = {
-    // Default: 0 
-    // One sample case: this is the µ that the mean will be compared with. 
-    // Two sample case: this is the ∂ value that the mean diffrence will be compared with. 
+    // Default: 0
+    // One sample case: this is the µ that the mean will be compared with.
+    // Two sample case: this is the ∂ value that the mean diffrence will be compared with.
     mu: 1,
 
-    // Default: false 
-    // If true don't assume variance is equal and use the Welch approximation. 
-    // This only applies of two samples are used. 
+    // Default: false
+    // If true don't assume variance is equal and use the Welch approximation.
+    // This only applies of two samples are used.
     varEqual: false,
 
-    // Default: 0.05 
-    // The significance level of the test 
+    // Default: 0.05
+    // The significance level of the test
     alpha: 0.05,
 
-    // Default "not equal" 
-    // What should the alternative hypothesis be: 
-    // - One sample case: could the mean be less, greater or not equal to mu property. 
-    // - Two sample case: could the mean diffrence be less, greater or not equal to mu property. 
+    // Default "not equal"
+    // What should the alternative hypothesis be:
+    // - One sample case: could the mean be less, greater or not equal to mu property.
+    // - Two sample case: could the mean diffrence be less, greater or not equal to mu property.
     alternative: "greater"
 };
 const stat = ttest(sampleA, sampleB, options)
@@ -142,12 +142,35 @@ app.post('/api/v1/delete/course', function(req, res) {
     res.json(deleteCourse(req.body))
 })
 
+app.post('/api/v1/accept', function(req, res) {
+    res.json(acceptStudent(req.body.schoolId, req.body.courseId, req.body.studentId))
+})
+
+app.post('/api/v1/submitpoll', function(req, res) {
+    res.json(submitPoll(req.body))
+})
+
 // method --------------------------------------------
+
+function submitPoll(param) {
+    firebase.database().ref('schools/' + param.schoolId).child('poll').push({
+        currentId: param.currentUserId,
+        schoolId: param.schoolId,
+        courseId: param.courseId,
+        dataPoll: param.pollSchool,
+        ttest: {
+            before: param.pollUser[0].data,
+            after: param.pollUser[1].data
+        }
+    })
+}
 
 function getDashboardSchool(param) {
     self.temp = []
     self.returnItem = []
     self.course = []
+    self.data = []
+    self.countStudent = 0
     firebase.database().ref('schools/' + param + '/courses').on('value', function(snapshot_course) {
         if (snapshot_course.val() == undefined) {
             console.log("empty Course");
@@ -158,8 +181,9 @@ function getDashboardSchool(param) {
                 if (self.course[item].students == undefined) {
                     self.temp = [] // set empty student
                 } else {
-                    self.temp = [] // set new array 
+                    self.temp = [] // set new array
                     Object.keys(self.course[item].students).forEach(function(studentId) {
+                        self.countStudent += Object.keys(self.course[item].students).length
                         firebase.database().ref('users').child(studentId).on('value', function(snapshot_user) {
                             self.temp.push({
                                 std_id: studentId,
@@ -169,7 +193,7 @@ function getDashboardSchool(param) {
                         })
                     })
                 }
-                self.returnItem.push({
+                self.data.push({
                     courseId: item,
                     course: self.course[item],
                     students: self.temp
@@ -177,7 +201,11 @@ function getDashboardSchool(param) {
             })
         }
     })
-
+    self.returnItem.push({
+        data: self.data,
+        countStudent: self.countStudent
+    })
+    console.log(self.countStudent);
     return self.returnItem
 }
 
@@ -186,33 +214,50 @@ function getDashboardUser(userId) {
     var user = []
     user.push(self.database.users[userId])
     var course = self.database.users[userId].courses
-    console.log(course);
+        //console.log(course);
     if (course == undefined) {
         console.log("ยังไม่ได้ลงเรียน");
     } else {
         var keys = Object.keys(course)
-        console.log(keys);
         keys.sort() // sort the array of keys
         keys.forEach(function(item) {
-            //console.log(course[item].schoolId, course[item].courseId)
-            database.ref('schools/' + course[item].schoolId).on('value', function(snapshot_school) {
-                database.ref('schools/' + course[item].schoolId + '/courses/' + course[item].courseId).on('value', function(snapshot_course) {
-                    var countRegister = Object.keys(snapshot_course.val().students)
-                    self.item.push({
-                        school: {
-                            schoolId: course[item].schoolId,
-                            value: snapshot_school.val()
-                        },
-                        course: {
-                            courseId: course[item].courseId,
-                            value: snapshot_course.val()
-                        },
-                        infoRegister: {
-                            dateRegister: snapshot_course.val().students[userId].date,
-                            status: snapshot_course.val().students[userId].status
-                        },
-                        countRegister: countRegister.length
+            self.checkPoll = false
+            database.ref('schools/' + course[item].schoolId).child('poll').on('value', function(poll) {
+                if (poll.val() == undefined) {
+                    console.log("Empty poll")
+                } else {
+                    Object.keys(poll.val()).forEach(function(checkPoll) {
+                        if (poll.val()[checkPoll].courseId == course[item].courseId && userId == poll.val()[checkPoll].currentId) {
+                            self.checkPoll = true
+                        }
                     })
+                }
+            })
+            database.ref('schools/' + course[item].schoolId).on('value', function(snapshot_school) {
+
+                database.ref('schools/' + course[item].schoolId + '/courses/' + course[item].courseId).on('value', function(snapshot_course) {
+                    if (snapshot_course.val() == undefined) {
+                        console.log("debug error")
+                    } else {
+                        var countRegister = Object.keys(snapshot_course.val().students)
+                            // console.log(snapshot_course.val());
+                        self.item.push({
+                            school: {
+                                schoolId: course[item].schoolId,
+                                value: snapshot_school.val()
+                            },
+                            course: {
+                                courseId: course[item].courseId,
+                                value: snapshot_course.val()
+                            },
+                            infoRegister: {
+                                dateRegister: snapshot_course.val().students[userId].date,
+                                status: snapshot_course.val().students[userId].status
+                            },
+                            countRegister: countRegister.length,
+                            checkPoll: self.checkPoll
+                        })
+                    }
                 })
             })
         })
@@ -221,6 +266,17 @@ function getDashboardUser(userId) {
         })
     }
     return user
+}
+
+function acceptStudent(schoolId, courseId, studentId) {
+    console.log(schoolId, courseId, studentId)
+    firebase.database().ref('schools/' + schoolId + '/courses/' + courseId + '/students').child(studentId).update({
+        status: "accepted"
+    })
+    firebase.database().ref('users/' + studentId + '/courses').child(courseId).update({
+        status: "accepted"
+    })
+    return getDashboardSchool(schoolId)
 }
 
 function cregister(params) {
@@ -330,6 +386,8 @@ function loadThisCourse(schoolId, courseId) {
 
 function loadAllCoures(uid) {
     var allCourses = []
+    var returnItem = []
+    var resultPoll = []
     database.ref('schools/' + uid).child('courses').on('child_added', function(snapshot) {
         // var countRegister = Object.keys(snapshot.val().students)
         var item = {
@@ -338,13 +396,62 @@ function loadAllCoures(uid) {
         }
         allCourses.push(item)
     })
-    return allCourses
+
+    database.ref('schools/' + uid).child('poll').on('value', function(poll) {
+        var t1, t2, t3, t4, t5, t6
+        t1 = t2 = t3 = t4 = t5 = t6 = 0
+        if (poll.val() == undefined) {
+            console.log("Empty poll")
+        } else {
+            console.log(Object.keys(poll.val()).length)
+            Object.keys(poll.val()).forEach(function(id) {
+                var getDataPoll = poll.val()[id].dataPoll
+                var count = 0
+                Object.keys(getDataPoll).forEach(function(snp) {
+                    count++
+                    if (count == 1) {
+                        t1 += getDataPoll[snp].data
+                        console.log("คะแนนข้อที่ 1 ", getDataPoll[snp].data)
+                    } else if (count == 2) {
+                        t2 += getDataPoll[snp].data
+                        console.log("คะแนนข้อที่ 2 ", getDataPoll[snp].data)
+                    } else if (count == 3) {
+                        t3 += getDataPoll[snp].data
+                        console.log("คะแนนข้อที่ 3 ", getDataPoll[snp].data)
+                    } else if (count == 4) {
+                        t4 += getDataPoll[snp].data
+                        console.log("คะแนนข้อที่ 4 ", getDataPoll[snp].data)
+                    } else if (count == 5) {
+                        t5 += getDataPoll[snp].data
+                        console.log("คะแนนข้อที่ 5 ", getDataPoll[snp].data)
+                    } else if (count == 6) {
+                        t6 += getDataPoll[snp].data
+                        console.log("คะแนนข้อที่ 6 ", getDataPoll[snp].data)
+                    }
+                })
+            })
+            resultPoll.push({
+                n:Object.keys(poll.val()).length,
+                p1:t1,
+                p2:t2,
+                p3:t3,
+                p4:t4,
+                p5:t5,
+                p6:t6
+            })
+        }
+    })
+
+    return {
+        courses: allCourses,
+        resultPoll: resultPoll
+    }
 }
 
-function deleteCourse(params){
+function deleteCourse(params) {
     console.log(params)
-    firebase.database().ref('schools/' + params.schoolId + '/courses/').child(courseId).remove()
-    return getDashboardUser(params.schoolId)
+    firebase.database().ref('schools/' + params.schoolId + '/courses/').child(params.courseId).remove()
+    return getDashboardSchool(params.schoolId)
 }
 
 function getDateTime() {
