@@ -7,8 +7,8 @@
 6 silly lifecycle backend-ranking@1.0.0~prestart: no script for prestart, continuing
 7 info lifecycle backend-ranking@1.0.0~start: backend-ranking@1.0.0
 8 verbose lifecycle backend-ranking@1.0.0~start: unsafe-perm in lifecycle true
-9 verbose lifecycle backend-ranking@1.0.0~start: PATH: /usr/local/lib/node_modules/npm/bin/node-gyp-bin:/Users/D9gameTH/GitHub/backend-ranking/node_modules/.bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
-10 verbose lifecycle backend-ranking@1.0.0~start: CWD: /Users/D9gameTH/GitHub/backend-ranking
+9 verbose lifecycle backend-ranking@1.0.0~start: PATH: /usr/local/lib/node_modules/npm/bin/node-gyp-bin:/Users/D9gameTH/GitHub/funfunc-Project/funfunc-backend/node_modules/.bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+10 verbose lifecycle backend-ranking@1.0.0~start: CWD: /Users/D9gameTH/GitHub/funfunc-Project/funfunc-backend
 11 silly lifecycle backend-ranking@1.0.0~start: Args: [ '-c', 'node index.js' ]
 12 silly lifecycle backend-ranking@1.0.0~start: Returned: code: 1  signal: null
 13 info lifecycle backend-ranking@1.0.0~start: Failed to exec start script
@@ -23,8 +23,8 @@
 14 verbose stack     at maybeClose (internal/child_process.js:885:16)
 14 verbose stack     at Process.ChildProcess._handle.onexit (internal/child_process.js:226:5)
 15 verbose pkgid backend-ranking@1.0.0
-16 verbose cwd /Users/D9gameTH/GitHub/backend-ranking
-17 error Darwin 16.3.0
+16 verbose cwd /Users/D9gameTH/GitHub/funfunc-Project/funfunc-backend
+17 error Darwin 16.4.0
 18 error argv "/usr/local/bin/node" "/usr/local/bin/npm" "start"
 19 error node v7.2.0
 20 error npm  v3.10.9

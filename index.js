@@ -3,7 +3,7 @@
 const express = require('express')
 const firebase = require('firebase-admin')
 const bodyParser = require('body-parser')
-const methodOverride = require('method-override')
+// const methodOverride = require('method-override')
 const ttest = require('ttest')
 const summary = require('summary');
 
@@ -46,11 +46,12 @@ firebase.initializeApp({
 
 var app = express()
 var self = this
+app.set('port', (process.env.PORT || 3000));
 app.use(bodyParser.urlencoded({
     extended: true
 }))
 app.use(bodyParser.json())
-app.use(methodOverride())
+// app.use(methodOverride())
 app.use(function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*")
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
@@ -65,9 +66,9 @@ const database = firebase.database()
 const schoolsRef = database.ref().child('schools')
 const usersRef = database.ref().child('users')
 const demoRef = database.ref().child('demo')
-    //var date = new Date()
+//var date = new Date()
 var date = getDateTime()
-    // main ------------------------------------------
+// main ------------------------------------------
 
 database.ref().on('value', function(snapshot) {
         self.database = snapshot.val()
@@ -77,12 +78,12 @@ database.ref().on('value', function(snapshot) {
         console.log("The read failed: " + errorObject.code)
     })
 
-app.listen(3000, function() {
-    console.log('Running app listening on port 3000!')
-})
+app.listen(app.get('port'), function() {
+    console.log('Node app is running on port', app.get('port'));
+});
 
 app.get('/api/v1/schools', function(req, res) {
-    res.json(loadSchool(self.database.schools))
+    res.json(initIndex(self.database.schools))
 })
 
 app.get('/api/v1/users', function(req, res) {
@@ -116,21 +117,33 @@ app.post('/api/v1/updateschool/:uid', function(req, res) {
         biography: req.body.biography
     }
     res.json(updateSchoolInfo(item, req.params.uid))
-        // res.json(item, req.params.uid)
+    // res.json(item, req.params.uid)
 })
-app.post('/api/v1/register', function(req, res) {
+app.post('/api/v1/register-student', function(req, res) {
     res.json(registerStd(req.body.schoolId, req.body.courseId, req.body.student))
 })
 
-app.post('/api/v1/cregister', function(req, res) {
-    console.log(req.body)
-    res.json(cregister(req.body))
-        //res.json(registerStd(req.body.schoolId, req.body.courseId, req.body.student))
+app.post('/api/v1/register-tutor', function(req, res) {
+    res.json(registerTutor(req.body.schoolId, req.body.courseId, req.body.tutor))
 })
 
-app.get('/api/v1/user/:user', function(req, res) {
+app.post('/api/v1/check-register-student', function(req, res) {
+    res.json(cregisterStudent(req.body))
+    //res.json(registerStd(req.body.schoolId, req.body.courseId, req.body.student))
+})
+app.post('/api/v1/check-register-tutor', function(req, res) {
+    res.json(cregisterTutor(req.body))
+    //res.json(registerStd(req.body.schoolId, req.body.courseId, req.body.student))
+})
+
+app.get('/api/v1/student/:user', function(req, res) {
     // console.log(req.params.user)
-    res.json(getDashboardUser(req.params.user))
+    res.json(getDashboardStudent(req.params.user))
+})
+
+app.get('/api/v1/tutor/:user', function(req, res) {
+    // console.log(req.params.user)
+    res.json(getDashboardTutor(req.params.user))
 })
 
 app.post('/api/v1/create_course', function(req, res) {
@@ -142,15 +155,61 @@ app.post('/api/v1/delete/course', function(req, res) {
     res.json(deleteCourse(req.body))
 })
 
-app.post('/api/v1/accept', function(req, res) {
+app.post('/api/v1/accept-student', function(req, res) {
     res.json(acceptStudent(req.body.schoolId, req.body.courseId, req.body.studentId))
+})
+
+app.post('/api/v1/accept-tutor', function(req, res) {
+    res.json(acceptTutor(req.body.schoolId, req.body.courseId, req.body.tutorId))
 })
 
 app.post('/api/v1/submitpoll', function(req, res) {
     res.json(submitPoll(req.body))
 })
 
+app.get('/api/v1/get/admin', function(req, res) {
+    res.json(dashboardAdmin())
+})
+
 // method --------------------------------------------
+
+function dashboardAdmin() {
+    var countStudent = 0
+    var countTutor = 0
+    var countSchool = 0
+    var itemReturn = []
+    var tutorsItem = []
+    var studentsItem = []
+    var schoolsItem = []
+    var keySchool = Object.keys(self.database.schools)
+    var keyUser = Object.keys(self.database.users)
+
+    keySchool.forEach(function(keySchoolId) {
+        schoolsItem.push({
+            schoolId: keySchoolId,
+            value: self.database.schools[keySchoolId]
+        })
+        countSchool++
+    })
+    keyUser.forEach(function(keyUserId) {
+        if (self.database.users[keyUserId].status == "student") {
+            studentsItem.push(self.database.users[keyUserId])
+            countStudent++
+        } else if (self.database.users[keyUserId].status == "tutor") {
+            tutorsItem.push(self.database.users[keyUserId])
+            countTutor++
+        }
+    })
+    itemReturn.push({
+        countStudent: countStudent,
+        countTutor: countTutor,
+        countSchool: countSchool,
+        students: studentsItem,
+        tutors: tutorsItem,
+        schools: schoolsItem
+    })
+    return itemReturn
+}
 
 function submitPoll(param) {
     firebase.database().ref('schools/' + param.schoolId).child('poll').push({
@@ -163,14 +222,25 @@ function submitPoll(param) {
             after: param.pollUser[1].data
         }
     })
+
+    firebase.database().ref('users/' + param.tutorId).child('poll').push({
+        currentId: param.currentUserId,
+        schoolId: param.schoolId,
+        courseId: param.courseId,
+        dataPoll: param.polltutor,
+    })
 }
 
 function getDashboardSchool(param) {
-    self.temp = []
+    console.log(param);
+    self.tempStudent = []
+    self.tempTutor = []
     self.returnItem = []
     self.course = []
-    self.data = []
+    self.studentData = []
+    self.tutorData = []
     self.countStudent = 0
+    self.countTutor = 0
     firebase.database().ref('schools/' + param + '/courses').on('value', function(snapshot_course) {
         if (snapshot_course.val() == undefined) {
             console.log("empty Course");
@@ -179,13 +249,14 @@ function getDashboardSchool(param) {
             var keyCourse = Object.keys(snapshot_course.val())
             keyCourse.forEach(function(item) {
                 if (self.course[item].students == undefined) {
-                    self.temp = [] // set empty student
+                    self.tempStudent = [] // set empty student
                 } else {
-                    self.temp = [] // set new array
+                    self.tempStudent = [] // set new array
+                    self.countStudent += Object.keys(self.course[item].students).length
+
                     Object.keys(self.course[item].students).forEach(function(studentId) {
-                        self.countStudent += Object.keys(self.course[item].students).length
                         firebase.database().ref('users').child(studentId).on('value', function(snapshot_user) {
-                            self.temp.push({
+                            self.tempStudent.push({
                                 std_id: studentId,
                                 std_status: self.course[item].students[studentId].status,
                                 value: snapshot_user.val()
@@ -193,28 +264,47 @@ function getDashboardSchool(param) {
                         })
                     })
                 }
-                self.data.push({
+
+                if (self.course[item].tutors == undefined) {
+                    self.tempTutor = [] // set empty student
+                    console.log("ไม่มี Tutor");
+                } else {
+                    self.tempTutor = [] // set new array
+                    self.countTutor += Object.keys(self.course[item].tutors).length
+                    Object.keys(self.course[item].tutors).forEach(function(tutorId) {
+                        firebase.database().ref('users').child(tutorId).on('value', function(snapshot_user) {
+                            self.tempTutor.push({
+                                tutor_id: tutorId,
+                                tutor_status: self.course[item].tutors[tutorId].status,
+                                value: snapshot_user.val()
+                            })
+                        })
+                    })
+                }
+                self.studentData.push({
                     courseId: item,
                     course: self.course[item],
-                    students: self.temp
+                    students: self.tempStudent,
+                    tutors: self.tempTutor
                 })
             })
         }
     })
     self.returnItem.push({
-        data: self.data,
-        countStudent: self.countStudent
+        data: self.studentData,
+        countStudent: self.countStudent,
+        countTutor: self.countTutor
     })
     console.log(self.countStudent);
     return self.returnItem
 }
 
-function getDashboardUser(userId) {
+function getDashboardTutor(userId) {
     self.item = []
     var user = []
     user.push(self.database.users[userId])
     var course = self.database.users[userId].courses
-        //console.log(course);
+    console.log(course);
     if (course == undefined) {
         console.log("ยังไม่ได้ลงเรียน");
     } else {
@@ -239,8 +329,67 @@ function getDashboardUser(userId) {
                     if (snapshot_course.val() == undefined) {
                         console.log("debug error")
                     } else {
+                        var countRegister = Object.keys(snapshot_course.val().tutors)
+                        // console.log(snapshot_course.val());
+                        self.item.push({
+                            school: {
+                                schoolId: course[item].schoolId,
+                                value: snapshot_school.val()
+                            },
+                            course: {
+                                courseId: course[item].courseId,
+                                value: snapshot_course.val()
+                            },
+                            infoRegister: {
+                                dateRegister: snapshot_course.val().tutors[userId].date,
+                                status: snapshot_course.val().tutors[userId].status
+                            },
+                            countRegister: countRegister.length,
+                            checkPoll: self.checkPoll
+                        })
+                    }
+                })
+            })
+        })
+        user.push({
+            course: self.item
+        })
+    }
+    return user
+}
+
+function getDashboardStudent(userId) {
+    self.item = []
+    var user = []
+    var tutorId = null
+    user.push(self.database.users[userId])
+    var course = self.database.users[userId].courses
+    console.log(course);
+    if (course == undefined) {
+        console.log("ยังไม่ได้ลงเรียน");
+    } else {
+        var keys = Object.keys(course)
+        keys.sort() // sort the array of keys
+        keys.forEach(function(item) {
+            self.checkPoll = false
+            database.ref('schools/' + course[item].schoolId).child('poll').on('value', function(poll) {
+                if (poll.val() == undefined) {
+                    console.log("Empty poll")
+                } else {
+                    Object.keys(poll.val()).forEach(function(checkPoll) {
+                        if (poll.val()[checkPoll].courseId == course[item].courseId && userId == poll.val()[checkPoll].currentId) {
+                            self.checkPoll = true
+                        }
+                    })
+                }
+            })
+            database.ref('schools/' + course[item].schoolId).on('value', function(snapshot_school) {
+                database.ref('schools/' + course[item].schoolId + '/courses/' + course[item].courseId).on('value', function(snapshot_course) {
+                    if (snapshot_course.val() == undefined) {
+                        console.log("debug error")
+                    } else {
                         var countRegister = Object.keys(snapshot_course.val().students)
-                            // console.log(snapshot_course.val());
+                        // console.log(snapshot_course.val());
                         self.item.push({
                             school: {
                                 schoolId: course[item].schoolId,
@@ -268,6 +417,17 @@ function getDashboardUser(userId) {
     return user
 }
 
+function acceptTutor(schoolId, courseId, tutorId) {
+    console.log(schoolId, courseId, tutorId)
+    firebase.database().ref('schools/' + schoolId + '/courses/' + courseId + '/tutors').child(tutorId).update({
+        status: "accepted"
+    })
+    firebase.database().ref('users/' + tutorId + '/courses').child(courseId).update({
+        status: "accepted"
+    })
+    return getDashboardSchool(schoolId)
+}
+
 function acceptStudent(schoolId, courseId, studentId) {
     console.log(schoolId, courseId, studentId)
     firebase.database().ref('schools/' + schoolId + '/courses/' + courseId + '/students').child(studentId).update({
@@ -278,8 +438,8 @@ function acceptStudent(schoolId, courseId, studentId) {
     })
     return getDashboardSchool(schoolId)
 }
-
-function cregister(params) {
+// check Regsiter Student
+function cregisterStudent(params) {
     self.checkRegister = []
     database.ref('schools/' + params.schoolId + '/courses/' + params.courseId + '/students/').child(params.studentId).on('value',
         function(snapshot) {
@@ -290,16 +450,49 @@ function cregister(params) {
         })
     return self.checkRegister
 }
-
+// check Register Tutor
+function cregisterTutor(params) {
+    console.log("aasdasdsdasdasdas", params);
+    self.checkRegister = []
+    database.ref('schools/' + params.schoolId + '/courses/' + params.courseId + '/tutors/').child(params.tutorId).on('value',
+        function(snapshot) {
+            self.checkRegister = snapshot.val()
+        },
+        function(errorObject) {
+            console.log("The read failed: " + errorObject.code)
+        })
+    return self.checkRegister
+}
+// Register Student
 function registerStd(schoolId, courseId, student) {
     console.log(schoolId, courseId, student);
     firebase.database().ref('schools/' + schoolId + '/courses/' + courseId + '/students').child(student.uid).set({
-        data: student.providerData[0],
+        data: student,
+        date: date,
+        status: "accepted"
+
+    })
+    firebase.database().ref('users/' + student.uid + '/courses').child(courseId).set({
+        schoolId: schoolId,
+        courseId: courseId,
+        date: date,
+        status: "accepted"
+    })
+    return {
+        status: 200,
+        text: "success"
+    }
+}
+// reGister Tutor
+function registerTutor(schoolId, courseId, tutor) {
+    console.log(schoolId, courseId, tutor);
+    firebase.database().ref('schools/' + schoolId + '/courses/' + courseId + '/tutors').child(tutor.uid).set({
+        data: tutor,
         date: date,
         status: "pending"
 
     })
-    firebase.database().ref('users/' + student.uid + '/courses').child(courseId).set({
+    firebase.database().ref('users/' + tutor.uid + '/courses').child(courseId).set({
         schoolId: schoolId,
         courseId: courseId,
         date: date,
@@ -325,7 +518,7 @@ function updateSchoolInfo(param, id) {
             // self.infoSchools.push({ status: 400 })
         } else {
             loadInfoSchool(id)
-                //self.infoSchools.push({ status: 200 })
+            //self.infoSchools.push({ status: 200 })
             console.log("Data saved successfully.");
         }
     })
@@ -358,16 +551,76 @@ function loadSchool(schools) {
     return self.school
 }
 
+function initIndex(schools) {
+    self.school = []
+    var keys = Object.keys(schools)
+    keys.forEach(function(keySchool) {
+        if (schools[keySchool].poll == undefined) {
+            console.log("didnt have poll");
+            var item = {
+                id: keySchool,
+                value: schools[keySchool],
+                persent: 0,
+                countPollByStd: 0,
+                maxPoll: maxPoll,
+                sumPoll: sumPoll
+            }
+        } else {
+            var polls = schools[keySchool].poll // โพลทั้งหมด
+            var t1, t2, t3, t4, t5, t6
+            var maxPoll = 0
+            t1 = t2 = t3 = t4 = t5 = t6 = 0
+
+            var countTotalPoll = Object.keys(polls).length // จำนวนนักเรียนที่ทำโพล
+            console.log("มีนักเรียนทำโพลทั้งหมด = " + countTotalPoll);
+            Object.keys(polls).forEach(function(keyPoll) {
+                var poll = polls[keyPoll].dataPoll // โพลที่ดึงออกมาที่ละคน
+                for (var i = 0; i < poll.length; i++) {
+                    maxPoll += 5
+                    if (i == 0) {
+                        t1 += poll[i].data
+                    } else if (i == 1) {
+                        t2 += poll[i].data
+                    } else if (i == 2) {
+                        t3 += poll[i].data
+                    } else if (i == 3) {
+                        t4 += poll[i].data
+                    } else if (i == 4) {
+                        t5 += poll[i].data
+                    } else if (i == 5) {
+                        t6 += poll[i].data
+                    }
+                }
+
+            })
+            var sumPoll = t1 + t2 + t3 + t4 + t5 + t6
+            console.log(maxPoll);
+            console.log(sumPoll);
+            console.log(((sumPoll / maxPoll) * 100).toFixed(2));
+            var item = {
+                id: keySchool,
+                value: schools[keySchool],
+                persent:((sumPoll / maxPoll) * 100).toFixed(2),
+                countPollByStd: countTotalPoll,
+                maxPoll: maxPoll,
+                sumPoll: sumPoll
+            }
+        }
+        self.school.push(item)
+    })
+    return self.school
+}
+
 function loadInfoSchool(uid, req, res) {
     self.infoSchools = []
     database.ref('schools').child(uid).on('value', function(snapshot) {
-            var item = {
-                id: snapshot.key,
-                value: snapshot.val()
-            }
-            self.infoSchools.push(item)
-        })
-        // console.log(self.infoSchools)
+        var item = {
+            id: snapshot.key,
+            value: snapshot.val()
+        }
+        self.infoSchools.push(item)
+    })
+    // console.log(self.infoSchools)
     return self.infoSchools
 }
 
@@ -387,7 +640,7 @@ function loadThisCourse(schoolId, courseId) {
 function loadAllCoures(uid) {
     var allCourses = []
     var returnItem = []
-    var resultPoll = []
+    var poll
     database.ref('schools/' + uid).child('courses').on('child_added', function(snapshot) {
         // var countRegister = Object.keys(snapshot.val().students)
         var item = {
@@ -395,8 +648,19 @@ function loadAllCoures(uid) {
             value: snapshot.val()
         }
         allCourses.push(item)
+        poll = calPoll(uid)
     })
 
+
+
+    return {
+        courses: allCourses,
+        resultPoll: poll
+    }
+}
+
+function calPoll(uid) {
+    var resultPoll = []
     database.ref('schools/' + uid).child('poll').on('value', function(poll) {
         var t1, t2, t3, t4, t5, t6
         t1 = t2 = t3 = t4 = t5 = t6 = 0
@@ -431,21 +695,17 @@ function loadAllCoures(uid) {
                 })
             })
             resultPoll.push({
-                n:Object.keys(poll.val()).length,
-                p1:t1,
-                p2:t2,
-                p3:t3,
-                p4:t4,
-                p5:t5,
-                p6:t6
+                n: Object.keys(poll.val()).length,
+                p1: t1,
+                p2: t2,
+                p3: t3,
+                p4: t4,
+                p5: t5,
+                p6: t6
             })
         }
     })
-
-    return {
-        courses: allCourses,
-        resultPoll: resultPoll
-    }
+    return resultPoll
 }
 
 function deleteCourse(params) {
