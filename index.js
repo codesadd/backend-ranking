@@ -33,7 +33,7 @@ const options = {
     alternative: "greater"
 };
 const stat = ttest(sampleA, sampleB, options)
-console.log(stat, stat.valid())
+//console.log(stat, stat.valid())
 
 
 // init variable ---------------------------------
@@ -79,7 +79,7 @@ database.ref().on('value', function(snapshot) {
     })
 
 app.listen(app.get('port'), function() {
-    console.log('Node app is running on port', app.get('port'));
+    //console.log('Node app is running on port', app.get('port'));
 });
 
 app.get('/api/v1/schools', function(req, res) {
@@ -147,7 +147,7 @@ app.get('/api/v1/tutor/:user', function(req, res) {
 })
 
 app.post('/api/v1/create_course', function(req, res) {
-    console.log(req.body)
+    //console.log(req.body)
     res.json(createCourse(req.body.uid, req.body.params))
 })
 
@@ -232,7 +232,7 @@ function submitPoll(param) {
 }
 
 function getDashboardSchool(param) {
-    console.log(param);
+    // console.log(param);
     self.tempStudent = []
     self.tempTutor = []
     self.returnItem = []
@@ -295,7 +295,7 @@ function getDashboardSchool(param) {
         countStudent: self.countStudent,
         countTutor: self.countTutor
     })
-    console.log(self.countStudent);
+    // console.log(self.countStudent);
     return self.returnItem
 }
 
@@ -304,9 +304,9 @@ function getDashboardTutor(userId) {
     var user = []
     user.push(self.database.users[userId])
     var course = self.database.users[userId].courses
-    console.log(course);
+    //console.log(course);
     if (course == undefined) {
-        console.log("ยังไม่ได้ลงเรียน");
+        // console.log("ยังไม่ได้ลงเรียน");
     } else {
         var keys = Object.keys(course)
         keys.sort() // sort the array of keys
@@ -314,7 +314,7 @@ function getDashboardTutor(userId) {
             self.checkPoll = false
             database.ref('schools/' + course[item].schoolId).child('poll').on('value', function(poll) {
                 if (poll.val() == undefined) {
-                    console.log("Empty poll")
+                    //console.log("Empty poll")
                 } else {
                     Object.keys(poll.val()).forEach(function(checkPoll) {
                         if (poll.val()[checkPoll].courseId == course[item].courseId && userId == poll.val()[checkPoll].currentId) {
@@ -327,7 +327,7 @@ function getDashboardTutor(userId) {
 
                 database.ref('schools/' + course[item].schoolId + '/courses/' + course[item].courseId).on('value', function(snapshot_course) {
                     if (snapshot_course.val() == undefined) {
-                        console.log("debug error")
+                      //  console.log("debug error")
                     } else {
                         var countRegister = Object.keys(snapshot_course.val().tutors)
                         // console.log(snapshot_course.val());
@@ -366,7 +366,7 @@ function getDashboardStudent(userId) {
     var course = self.database.users[userId].courses
     console.log(course);
     if (course == undefined) {
-        console.log("ยังไม่ได้ลงเรียน");
+        // console.log("ยังไม่ได้ลงเรียน");
     } else {
         var keys = Object.keys(course)
         keys.sort() // sort the array of keys
@@ -386,7 +386,7 @@ function getDashboardStudent(userId) {
             database.ref('schools/' + course[item].schoolId).on('value', function(snapshot_school) {
                 database.ref('schools/' + course[item].schoolId + '/courses/' + course[item].courseId).on('value', function(snapshot_course) {
                     if (snapshot_course.val() == undefined) {
-                        console.log("debug error")
+                        // console.log("debug error")
                     } else {
                         var countRegister = Object.keys(snapshot_course.val().students)
                         // console.log(snapshot_course.val());
@@ -418,7 +418,7 @@ function getDashboardStudent(userId) {
 }
 
 function acceptTutor(schoolId, courseId, tutorId) {
-    console.log(schoolId, courseId, tutorId)
+    // console.log(schoolId, courseId, tutorId)
     firebase.database().ref('schools/' + schoolId + '/courses/' + courseId + '/tutors').child(tutorId).update({
         status: "accepted"
     })
@@ -429,7 +429,7 @@ function acceptTutor(schoolId, courseId, tutorId) {
 }
 
 function acceptStudent(schoolId, courseId, studentId) {
-    console.log(schoolId, courseId, studentId)
+    // console.log(schoolId, courseId, studentId)
     firebase.database().ref('schools/' + schoolId + '/courses/' + courseId + '/students').child(studentId).update({
         status: "accepted"
     })
@@ -452,7 +452,7 @@ function cregisterStudent(params) {
 }
 // check Register Tutor
 function cregisterTutor(params) {
-    console.log("aasdasdsdasdasdas", params);
+    // console.log("aasdasdsdasdasdas", params);
     self.checkRegister = []
     database.ref('schools/' + params.schoolId + '/courses/' + params.courseId + '/tutors/').child(params.tutorId).on('value',
         function(snapshot) {
@@ -465,7 +465,7 @@ function cregisterTutor(params) {
 }
 // Register Student
 function registerStd(schoolId, courseId, student) {
-    console.log(schoolId, courseId, student);
+    // console.log(schoolId, courseId, student);
     firebase.database().ref('schools/' + schoolId + '/courses/' + courseId + '/students').child(student.uid).set({
         data: student,
         date: date,
@@ -485,7 +485,7 @@ function registerStd(schoolId, courseId, student) {
 }
 // reGister Tutor
 function registerTutor(schoolId, courseId, tutor) {
-    console.log(schoolId, courseId, tutor);
+    // console.log(schoolId, courseId, tutor);
     firebase.database().ref('schools/' + schoolId + '/courses/' + courseId + '/tutors').child(tutor.uid).set({
         data: tutor,
         date: date,
@@ -518,15 +518,13 @@ function updateSchoolInfo(param, id) {
             // self.infoSchools.push({ status: 400 })
         } else {
             loadInfoSchool(id)
-            //self.infoSchools.push({ status: 200 })
-            console.log("Data saved successfully.");
         }
     })
     return self.infoSchools
 }
 
 function updateViewSchool(id) {
-    console.log(id);
+    // console.log(id);
     loadSchool(self.database.schools)
     var thisSchool = self.school.find(
         school => school.id === id)
@@ -556,7 +554,7 @@ function initIndex(schools) {
     var keys = Object.keys(schools)
     keys.forEach(function(keySchool) {
         if (schools[keySchool].poll == undefined) {
-            console.log("didnt have poll");
+            //console.log("didnt have poll");
             var item = {
                 id: keySchool,
                 value: schools[keySchool],
@@ -572,7 +570,7 @@ function initIndex(schools) {
             t1 = t2 = t3 = t4 = t5 = t6 = 0
 
             var countTotalPoll = Object.keys(polls).length // จำนวนนักเรียนที่ทำโพล
-            console.log("มีนักเรียนทำโพลทั้งหมด = " + countTotalPoll);
+            // console.log("มีนักเรียนทำโพลทั้งหมด = " + countTotalPoll);
             Object.keys(polls).forEach(function(keyPoll) {
                 var poll = polls[keyPoll].dataPoll // โพลที่ดึงออกมาที่ละคน
                 for (var i = 0; i < poll.length; i++) {
@@ -594,9 +592,9 @@ function initIndex(schools) {
 
             })
             var sumPoll = t1 + t2 + t3 + t4 + t5 + t6
-            console.log(maxPoll);
-            console.log(sumPoll);
-            console.log(((sumPoll / maxPoll) * 100).toFixed(2));
+            // console.log(maxPoll);
+            // console.log(sumPoll);
+            // console.log(((sumPoll / maxPoll) * 100).toFixed(2));
             var item = {
                 id: keySchool,
                 value: schools[keySchool],
@@ -665,7 +663,6 @@ function calPoll(uid) {
         var t1, t2, t3, t4, t5, t6
         t1 = t2 = t3 = t4 = t5 = t6 = 0
         if (poll.val() == undefined) {
-            console.log("Empty poll")
         } else {
             console.log(Object.keys(poll.val()).length)
             Object.keys(poll.val()).forEach(function(id) {
@@ -675,22 +672,16 @@ function calPoll(uid) {
                     count++
                     if (count == 1) {
                         t1 += getDataPoll[snp].data
-                        console.log("คะแนนข้อที่ 1 ", getDataPoll[snp].data)
                     } else if (count == 2) {
                         t2 += getDataPoll[snp].data
-                        console.log("คะแนนข้อที่ 2 ", getDataPoll[snp].data)
                     } else if (count == 3) {
                         t3 += getDataPoll[snp].data
-                        console.log("คะแนนข้อที่ 3 ", getDataPoll[snp].data)
                     } else if (count == 4) {
                         t4 += getDataPoll[snp].data
-                        console.log("คะแนนข้อที่ 4 ", getDataPoll[snp].data)
                     } else if (count == 5) {
                         t5 += getDataPoll[snp].data
-                        console.log("คะแนนข้อที่ 5 ", getDataPoll[snp].data)
                     } else if (count == 6) {
                         t6 += getDataPoll[snp].data
-                        console.log("คะแนนข้อที่ 6 ", getDataPoll[snp].data)
                     }
                 })
             })
@@ -709,7 +700,6 @@ function calPoll(uid) {
 }
 
 function deleteCourse(params) {
-    console.log(params)
     firebase.database().ref('schools/' + params.schoolId + '/courses/').child(params.courseId).remove()
     return getDashboardSchool(params.schoolId)
 }
