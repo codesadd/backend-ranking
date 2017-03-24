@@ -83,7 +83,7 @@ app.listen(app.get('port'), function() {
 });
 
 app.get('/api/v1/schools', function(req, res) {
-    res.json(initIndex(self.database.schools))
+    res.json(initIndex(self.database.schools, self.database.users))
 })
 
 app.get('/api/v1/users', function(req, res) {
@@ -153,6 +153,10 @@ app.post('/api/v1/create_course', function(req, res) {
 
 app.post('/api/v1/delete/course', function(req, res) {
     res.json(deleteCourse(req.body))
+})
+
+app.post('/api/v1/close/course', function(req, res) {
+    res.json(closeCourse(req.body))
 })
 
 app.post('/api/v1/accept-student', function(req, res) {
@@ -327,7 +331,7 @@ function getDashboardTutor(userId) {
 
                 database.ref('schools/' + course[item].schoolId + '/courses/' + course[item].courseId).on('value', function(snapshot_course) {
                     if (snapshot_course.val() == undefined) {
-                      //  console.log("debug error")
+                        //  console.log("debug error")
                     } else {
                         var countRegister = Object.keys(snapshot_course.val().tutors)
                         // console.log(snapshot_course.val());
@@ -549,10 +553,10 @@ function loadSchool(schools) {
     return self.school
 }
 
-function initIndex(schools) {
+function initIndex(schools, users) {
     self.school = []
-    var keys = Object.keys(schools)
-    keys.forEach(function(keySchool) {
+    self.tutor = []
+    Object.keys(schools).forEach(function(keySchool) {
         if (schools[keySchool].poll == undefined) {
             //console.log("didnt have poll");
             var item = {
@@ -598,7 +602,7 @@ function initIndex(schools) {
             var item = {
                 id: keySchool,
                 value: schools[keySchool],
-                persent:((sumPoll / maxPoll) * 100).toFixed(2),
+                persent: ((sumPoll / maxPoll) * 100).toFixed(2),
                 countPollByStd: countTotalPoll,
                 maxPoll: maxPoll,
                 sumPoll: sumPoll
@@ -606,6 +610,13 @@ function initIndex(schools) {
         }
         self.school.push(item)
     })
+
+    // ranking tutor function
+    // Object.keys(users).forEach(function(keyUser){
+    //   if (users[keyUser].status == "tutor") {
+    //     console.log(users[keyUser]);
+    //   }
+    // })
     return self.school
 }
 
@@ -662,8 +673,7 @@ function calPoll(uid) {
     database.ref('schools/' + uid).child('poll').on('value', function(poll) {
         var t1, t2, t3, t4, t5, t6
         t1 = t2 = t3 = t4 = t5 = t6 = 0
-        if (poll.val() == undefined) {
-        } else {
+        if (poll.val() == undefined) {} else {
             console.log(Object.keys(poll.val()).length)
             Object.keys(poll.val()).forEach(function(id) {
                 var getDataPoll = poll.val()[id].dataPoll
@@ -701,6 +711,13 @@ function calPoll(uid) {
 
 function deleteCourse(params) {
     firebase.database().ref('schools/' + params.schoolId + '/courses/').child(params.courseId).remove()
+    return getDashboardSchool(params.schoolId)
+}
+
+function closeCourse(params) {
+    firebase.database().ref('schools/' + params.schoolId + '/courses/').child(params.courseId).update({
+        status: "closed"
+    })
     return getDashboardSchool(params.schoolId)
 }
 
