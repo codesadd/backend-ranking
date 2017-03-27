@@ -3,7 +3,7 @@
 const express = require('express')
 const firebase = require('firebase-admin')
 const bodyParser = require('body-parser')
-// const methodOverride = require('method-override')
+    // const methodOverride = require('method-override')
 const ttest = require('ttest')
 const summary = require('summary');
 
@@ -33,7 +33,7 @@ const options = {
     alternative: "greater"
 };
 const stat = ttest(sampleA, sampleB, options)
-//console.log(stat, stat.valid())
+    //console.log(stat, stat.valid())
 
 
 // init variable ---------------------------------
@@ -51,7 +51,7 @@ app.use(bodyParser.urlencoded({
     extended: true
 }))
 app.use(bodyParser.json())
-// app.use(methodOverride())
+    // app.use(methodOverride())
 app.use(function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*")
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
@@ -66,9 +66,9 @@ const database = firebase.database()
 const schoolsRef = database.ref().child('schools')
 const usersRef = database.ref().child('users')
 const demoRef = database.ref().child('demo')
-//var date = new Date()
+    //var date = new Date()
 var date = getDateTime()
-// main ------------------------------------------
+    // main ------------------------------------------
 
 database.ref().on('value', function(snapshot) {
         self.database = snapshot.val()
@@ -117,7 +117,7 @@ app.post('/api/v1/updateschool/:uid', function(req, res) {
         biography: req.body.biography
     }
     res.json(updateSchoolInfo(item, req.params.uid))
-    // res.json(item, req.params.uid)
+        // res.json(item, req.params.uid)
 })
 app.post('/api/v1/register-student', function(req, res) {
     res.json(registerStd(req.body.schoolId, req.body.courseId, req.body.student))
@@ -129,11 +129,11 @@ app.post('/api/v1/register-tutor', function(req, res) {
 
 app.post('/api/v1/check-register-student', function(req, res) {
     res.json(cregisterStudent(req.body))
-    //res.json(registerStd(req.body.schoolId, req.body.courseId, req.body.student))
+        //res.json(registerStd(req.body.schoolId, req.body.courseId, req.body.student))
 })
 app.post('/api/v1/check-register-tutor', function(req, res) {
     res.json(cregisterTutor(req.body))
-    //res.json(registerStd(req.body.schoolId, req.body.courseId, req.body.student))
+        //res.json(registerStd(req.body.schoolId, req.body.courseId, req.body.student))
 })
 
 app.get('/api/v1/student/:user', function(req, res) {
@@ -176,6 +176,7 @@ app.get('/api/v1/get/admin', function(req, res) {
 })
 
 // method --------------------------------------------
+
 
 function dashboardAdmin() {
     var countStudent = 0
@@ -245,6 +246,8 @@ function getDashboardSchool(param) {
     self.tutorData = []
     self.countStudent = 0
     self.countTutor = 0
+    self.pendingCountStudent = 0
+    self.pendingCountTutor = 0
     firebase.database().ref('schools/' + param + '/courses').on('value', function(snapshot_course) {
         if (snapshot_course.val() == undefined) {
             console.log("empty Course");
@@ -259,6 +262,9 @@ function getDashboardSchool(param) {
                     self.countStudent += Object.keys(self.course[item].students).length
 
                     Object.keys(self.course[item].students).forEach(function(studentId) {
+                        if (self.course[item].students[studentId].status == "pending") {
+                            self.pendingCountStudent += 1 
+                        }
                         firebase.database().ref('users').child(studentId).on('value', function(snapshot_user) {
                             self.tempStudent.push({
                                 std_id: studentId,
@@ -276,6 +282,9 @@ function getDashboardSchool(param) {
                     self.tempTutor = [] // set new array
                     self.countTutor += Object.keys(self.course[item].tutors).length
                     Object.keys(self.course[item].tutors).forEach(function(tutorId) {
+                        if (self.course[item].tutors[tutorId].status == "pending") {
+                            self.pendingCountTutor += 1 
+                        }
                         firebase.database().ref('users').child(tutorId).on('value', function(snapshot_user) {
                             self.tempTutor.push({
                                 tutor_id: tutorId,
@@ -295,11 +304,13 @@ function getDashboardSchool(param) {
         }
     })
     self.returnItem.push({
-        data: self.studentData,
-        countStudent: self.countStudent,
-        countTutor: self.countTutor
-    })
-    // console.log(self.countStudent);
+            data: self.studentData,
+            countStudent: self.countStudent,
+            countTutor: self.countTutor,
+            pendingCountStudent: self.pendingCountStudent,
+            pendingCountTutor: self.pendingCountTutor,
+        })
+        // console.log(self.countStudent);
     return self.returnItem
 }
 
@@ -308,7 +319,7 @@ function getDashboardTutor(userId) {
     var user = []
     user.push(self.database.users[userId])
     var course = self.database.users[userId].courses
-    //console.log(course);
+        //console.log(course);
     if (course == undefined) {
         // console.log("ยังไม่ได้ลงเรียน");
     } else {
@@ -334,7 +345,7 @@ function getDashboardTutor(userId) {
                         //  console.log("debug error")
                     } else {
                         var countRegister = Object.keys(snapshot_course.val().tutors)
-                        // console.log(snapshot_course.val());
+                            // console.log(snapshot_course.val());
                         self.item.push({
                             school: {
                                 schoolId: course[item].schoolId,
@@ -393,7 +404,7 @@ function getDashboardStudent(userId) {
                         // console.log("debug error")
                     } else {
                         var countRegister = Object.keys(snapshot_course.val().students)
-                        // console.log(snapshot_course.val());
+                            // console.log(snapshot_course.val());
                         self.item.push({
                             school: {
                                 schoolId: course[item].schoolId,
@@ -473,14 +484,14 @@ function registerStd(schoolId, courseId, student) {
     firebase.database().ref('schools/' + schoolId + '/courses/' + courseId + '/students').child(student.uid).set({
         data: student,
         date: date,
-        status: "accepted"
+        status: "pending"
 
     })
     firebase.database().ref('users/' + student.uid + '/courses').child(courseId).set({
         schoolId: schoolId,
         courseId: courseId,
         date: date,
-        status: "accepted"
+        status: "pending"
     })
     return {
         status: 200,
@@ -574,7 +585,7 @@ function initIndex(schools, users) {
             t1 = t2 = t3 = t4 = t5 = t6 = 0
 
             var countTotalPoll = Object.keys(polls).length // จำนวนนักเรียนที่ทำโพล
-            // console.log("มีนักเรียนทำโพลทั้งหมด = " + countTotalPoll);
+                // console.log("มีนักเรียนทำโพลทั้งหมด = " + countTotalPoll);
             Object.keys(polls).forEach(function(keyPoll) {
                 var poll = polls[keyPoll].dataPoll // โพลที่ดึงออกมาที่ละคน
                 for (var i = 0; i < poll.length; i++) {
@@ -596,9 +607,9 @@ function initIndex(schools, users) {
 
             })
             var sumPoll = t1 + t2 + t3 + t4 + t5 + t6
-            // console.log(maxPoll);
-            // console.log(sumPoll);
-            // console.log(((sumPoll / maxPoll) * 100).toFixed(2));
+                // console.log(maxPoll);
+                // console.log(sumPoll);
+                // console.log(((sumPoll / maxPoll) * 100).toFixed(2));
             var item = {
                 id: keySchool,
                 value: schools[keySchool],
@@ -623,13 +634,13 @@ function initIndex(schools, users) {
 function loadInfoSchool(uid, req, res) {
     self.infoSchools = []
     database.ref('schools').child(uid).on('value', function(snapshot) {
-        var item = {
-            id: snapshot.key,
-            value: snapshot.val()
-        }
-        self.infoSchools.push(item)
-    })
-    // console.log(self.infoSchools)
+            var item = {
+                id: snapshot.key,
+                value: snapshot.val()
+            }
+            self.infoSchools.push(item)
+        })
+        // console.log(self.infoSchools)
     return self.infoSchools
 }
 
