@@ -172,13 +172,13 @@ app.post('/api/v1/submitpoll', function(req, res) {
 })
 
 app.get('/api/v1/get/admin', function(req, res) {
-    res.json(dashboardAdmin())
+    res.json(dashboardAdmin(self.database.schools, self.database.users))
 })
 
 // method --------------------------------------------
 
 
-function dashboardAdmin() {
+function dashboardAdmin(schools, users) {
     var countStudent = 0
     var countTutor = 0
     var countSchool = 0
@@ -186,15 +186,64 @@ function dashboardAdmin() {
     var tutorsItem = []
     var studentsItem = []
     var schoolsItem = []
+    var tests = []
     var keySchool = Object.keys(self.database.schools)
     var keyUser = Object.keys(self.database.users)
 
     keySchool.forEach(function(keySchoolId) {
-        schoolsItem.push({
-            schoolId: keySchoolId,
-            value: self.database.schools[keySchoolId]
-        })
+        if (schools[keySchoolId].poll == undefined) {
+            //console.log("didnt have poll");
+            var item = {
+                id: keySchoolId,
+                value: schools[keySchoolId],
+                persent: 0,
+                countPollByStd: 0,
+                maxPoll: maxPoll,
+                sumPoll: sumPoll
+            }
+        } else {
+            var polls = schools[keySchoolId].poll // โพลทั้งหมด
+            var t1, t2, t3, t4, t5, t6
+            var maxPoll = 0
+            t1 = t2 = t3 = t4 = t5 = t6 = 0
+
+            var countTotalPoll = Object.keys(polls).length // จำนวนนักเรียนที่ทำโพล
+                // console.log("มีนักเรียนทำโพลทั้งหมด = " + countTotalPoll);
+            Object.keys(polls).forEach(function(keyPoll) {
+                var poll = polls[keyPoll].dataPoll // โพลที่ดึงออกมาที่ละคน
+                for (var i = 0; i < poll.length; i++) {
+                    maxPoll += 5
+                    if (i == 0) {
+                        t1 += poll[i].data
+                    } else if (i == 1) {
+                        t2 += poll[i].data
+                    } else if (i == 2) {
+                        t3 += poll[i].data
+                    } else if (i == 3) {
+                        t4 += poll[i].data
+                    } else if (i == 4) {
+                        t5 += poll[i].data
+                    } else if (i == 5) {
+                        t6 += poll[i].data
+                    }
+                }
+
+            })
+            var sumPoll = t1 + t2 + t3 + t4 + t5 + t6
+                // console.log(maxPoll);
+                // console.log(sumPoll);
+                // console.log(((sumPoll / maxPoll) * 100).toFixed(2));
+            var item = {
+                id: keySchoolId,
+                value: schools[keySchoolId],
+                persent: ((sumPoll / maxPoll) * 100).toFixed(2),
+                countPollByStd: countTotalPoll,
+                maxPoll: maxPoll,
+                sumPoll: sumPoll
+            }
+        }
         countSchool++
+        schoolsItem.push(item)
     })
     keyUser.forEach(function(keyUserId) {
         if (self.database.users[keyUserId].status == "student") {
@@ -263,7 +312,7 @@ function getDashboardSchool(param) {
 
                     Object.keys(self.course[item].students).forEach(function(studentId) {
                         if (self.course[item].students[studentId].status == "pending") {
-                            self.pendingCountStudent += 1 
+                            self.pendingCountStudent += 1
                         }
                         firebase.database().ref('users').child(studentId).on('value', function(snapshot_user) {
                             self.tempStudent.push({
@@ -283,7 +332,7 @@ function getDashboardSchool(param) {
                     self.countTutor += Object.keys(self.course[item].tutors).length
                     Object.keys(self.course[item].tutors).forEach(function(tutorId) {
                         if (self.course[item].tutors[tutorId].status == "pending") {
-                            self.pendingCountTutor += 1 
+                            self.pendingCountTutor += 1
                         }
                         firebase.database().ref('users').child(tutorId).on('value', function(snapshot_user) {
                             self.tempTutor.push({
@@ -567,57 +616,17 @@ function loadSchool(schools) {
 function initIndex(schools, users) {
     self.school = []
     self.tutor = []
-    Object.keys(schools).forEach(function(keySchool) {
-        if (schools[keySchool].poll == undefined) {
-            //console.log("didnt have poll");
-            var item = {
-                id: keySchool,
-                value: schools[keySchool],
-                persent: 0,
-                countPollByStd: 0,
-                maxPoll: maxPoll,
-                sumPoll: sumPoll
+    Object.keys(schools).forEach(function(keySchoolId) {
+        var countCourse = 0
+        Object.keys(schools[keySchoolId].courses).forEach(function(keyCourseId) {
+            if (schools[keySchoolId].courses[keyCourseId].status == "opening") {
+                countCourse++
             }
-        } else {
-            var polls = schools[keySchool].poll // โพลทั้งหมด
-            var t1, t2, t3, t4, t5, t6
-            var maxPoll = 0
-            t1 = t2 = t3 = t4 = t5 = t6 = 0
-
-            var countTotalPoll = Object.keys(polls).length // จำนวนนักเรียนที่ทำโพล
-                // console.log("มีนักเรียนทำโพลทั้งหมด = " + countTotalPoll);
-            Object.keys(polls).forEach(function(keyPoll) {
-                var poll = polls[keyPoll].dataPoll // โพลที่ดึงออกมาที่ละคน
-                for (var i = 0; i < poll.length; i++) {
-                    maxPoll += 5
-                    if (i == 0) {
-                        t1 += poll[i].data
-                    } else if (i == 1) {
-                        t2 += poll[i].data
-                    } else if (i == 2) {
-                        t3 += poll[i].data
-                    } else if (i == 3) {
-                        t4 += poll[i].data
-                    } else if (i == 4) {
-                        t5 += poll[i].data
-                    } else if (i == 5) {
-                        t6 += poll[i].data
-                    }
-                }
-
-            })
-            var sumPoll = t1 + t2 + t3 + t4 + t5 + t6
-                // console.log(maxPoll);
-                // console.log(sumPoll);
-                // console.log(((sumPoll / maxPoll) * 100).toFixed(2));
-            var item = {
-                id: keySchool,
-                value: schools[keySchool],
-                persent: ((sumPoll / maxPoll) * 100).toFixed(2),
-                countPollByStd: countTotalPoll,
-                maxPoll: maxPoll,
-                sumPoll: sumPoll
-            }
+        })
+        var item = {
+            id: keySchoolId,
+            countCourse: countCourse,
+            value: schools[keySchoolId]
         }
         self.school.push(item)
     })
