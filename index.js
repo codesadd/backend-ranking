@@ -116,7 +116,7 @@ app.post('/api/v1/updateschool/:uid', function(req, res) {
         postalCode: req.body.postalCode,
         biography: req.body.biography
     }
-    res.json(updateSchoolInfo(item, req.params.uid))
+    res.json(updateSchoolInfo(req.body, req.params.uid))
         // res.json(item, req.params.uid)
 })
 app.post('/api/v1/register-student', function(req, res) {
@@ -318,6 +318,7 @@ function getDashboardSchool(param) {
                             self.tempStudent.push({
                                 std_id: studentId,
                                 std_status: self.course[item].students[studentId].status,
+                                payment: self.course[item].students[studentId].payment,
                                 value: snapshot_user.val()
                             })
                         })
@@ -533,14 +534,14 @@ function registerStd(schoolId, courseId, student) {
     firebase.database().ref('schools/' + schoolId + '/courses/' + courseId + '/students').child(student.uid).set({
         data: student,
         date: date,
-        status: "pending"
+        status: "waiting"
 
     })
     firebase.database().ref('users/' + student.uid + '/courses').child(courseId).set({
         schoolId: schoolId,
         courseId: courseId,
         date: date,
-        status: "pending"
+        status: "waiting"
     })
     return {
         status: 200,
@@ -575,6 +576,7 @@ function createCourse(id, params) {
 }
 
 function updateSchoolInfo(param, id) {
+    console.log(param)
     firebase.database().ref('schools').child(id).update(param, function(error) {
         // body...
         if (error) {
