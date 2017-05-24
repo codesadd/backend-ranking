@@ -10,7 +10,7 @@ const summary = require('summary');
 
 // Example T-test =================================
 var sampleA = [7, 10, 5, 8, 3, 4, 6, 5]
-var sampleB = [9, 12, 7, 8, 7, 6, 5, 10]
+var sampleB = [1, 2, 3, 4, 2, 3, 4, 2]
 const options = {
     // Default: 0
     // One sample case: this is the µ that the mean will be compared with.
@@ -32,8 +32,7 @@ const options = {
     // - Two sample case: could the mean diffrence be less, greater or not equal to mu property.
     alternative: "greater"
 };
-const stat = ttest(sampleA, sampleB, options)
-    //console.log(stat, stat.valid())
+
 
 
 // init variable ---------------------------------
@@ -205,11 +204,16 @@ function dashboardAdmin(schools, users) {
             var polls = schools[keySchoolId].poll // โพลทั้งหมด
             var t1, t2, t3, t4, t5, t6
             var maxPoll = 0
+            var arrAfterTtest = []
+            var arrBeforeTtest = []
             t1 = t2 = t3 = t4 = t5 = t6 = 0
+
 
             var countTotalPoll = Object.keys(polls).length // จำนวนนักเรียนที่ทำโพล
                 // console.log("มีนักเรียนทำโพลทั้งหมด = " + countTotalPoll);
             Object.keys(polls).forEach(function(keyPoll) {
+                arrAfterTtest.push(polls[keyPoll].ttest.after)
+                arrBeforeTtest.push(polls[keyPoll].ttest.before)
                 var poll = polls[keyPoll].dataPoll // โพลที่ดึงออกมาที่ละคน
                 for (var i = 0; i < poll.length; i++) {
                     maxPoll += 5
@@ -229,6 +233,8 @@ function dashboardAdmin(schools, users) {
                 }
 
             })
+            // console.log(arrAfterTtest, arrBeforeTtest)
+            const stat = ttest(arrBeforeTtest, arrAfterTtest, options)
             var sumPoll = t1 + t2 + t3 + t4 + t5 + t6
                 // console.log(maxPoll);
                 // console.log(sumPoll);
@@ -239,7 +245,9 @@ function dashboardAdmin(schools, users) {
                 persent: ((sumPoll / maxPoll) * 100).toFixed(2),
                 countPollByStd: countTotalPoll,
                 maxPoll: maxPoll,
-                sumPoll: sumPoll
+                sumPoll: sumPoll,
+                ttestResult: stat.valid(),
+                infoTtest: stat
             }
         }
         countSchool++
@@ -260,7 +268,8 @@ function dashboardAdmin(schools, users) {
         countSchool: countSchool,
         students: studentsItem,
         tutors: tutorsItem,
-        schools: schoolsItem
+        schools: schoolsItem,
+        
     })
     return itemReturn
 }
@@ -429,7 +438,7 @@ function getDashboardStudent(userId) {
     var tutorId = null
     user.push(self.database.users[userId])
     var course = self.database.users[userId].courses
-    console.log(course);
+    // console.log(course);
     if (course == undefined) {
         // console.log("ยังไม่ได้ลงเรียน");
     } else {
@@ -576,7 +585,7 @@ function createCourse(id, params) {
 }
 
 function updateSchoolInfo(param, id) {
-    console.log(param)
+    // console.log(param)
     firebase.database().ref('schools').child(id).update(param, function(error) {
         // body...
         if (error) {
@@ -696,7 +705,7 @@ function calPoll(uid) {
         var t1, t2, t3, t4, t5, t6
         t1 = t2 = t3 = t4 = t5 = t6 = 0
         if (poll.val() == undefined) {} else {
-            console.log(Object.keys(poll.val()).length)
+            // console.log(Object.keys(poll.val()).length)
             Object.keys(poll.val()).forEach(function(id) {
                 var getDataPoll = poll.val()[id].dataPoll
                 var count = 0
